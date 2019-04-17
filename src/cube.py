@@ -1,9 +1,129 @@
-from kociemba.cubiecube import CubieCube, moveCube
-from kociemba.corner import URF, UFL, ULB, UBR, DFR, DLF, DBL, DRB
-from kociemba.edge import UR, UF, UL, UB, DR, DF, DL, DB, FR, FL, BL, BR
+import random
+import numpy as np
 
+UFR = 0
+UFL = 1
+UBL = 2
+UBR = 3
+DFR = 4
+DFL = 5
+DBL = 6
+DBR = 7
 
-class Cube(CubieCube):
+UR = 0
+UF = 1
+UL = 2
+UB = 3
+DR = 4
+DF = 5
+DL = 6
+DB = 7
+FR = 8
+FL = 9
+BL = 10
+BR = 11
+
+"""
+To every position of a corner we map which corner belongs here as well as it's orientation
+    0: white/yellow side is facing up or down
+    1: white/yellow side is facing front or back
+    2: white/yellow side is facing right or left
+"""
+solved_corners = {
+            UBL: (UBL, 0),
+            UBR: (UBR, 0),
+            UFL: (UFL, 0),
+            UFR: (UFR, 0),
+            DBL: (DBL, 0),
+            DBR: (DBR, 0),
+            DFL: (DFL, 0),
+            DFR: (DFR, 0)
+        }
+
+"""
+Similarly for edges. True means that edge is oriented
+"""
+solved_edges = {
+            UL: (UL, True),
+            UB: (UB, True),
+            UR: (UR, True),
+            UF: (UF, True),
+            DL: (DL, True),
+            DB: (DB, True),
+            DR: (DR, True),
+            DF: (DF, True),
+            FL: (FL, True),
+            FR: (FR, True),
+            BL: (BL, True),
+            BR: (BR, True)
+        }
+
+class Cube():
+    def __init__(self, scrambled=False):
+        super().__init__()
+
+        self.corners = solved_corners.copy()
+        self.edges = solved_edges.copy()
+
+        if scrambled:
+            self.scramble()
+
+    def _cycle_corners(self, corners_to_swap, orientation_map):
+        last_corner, last_orientation = self.corners[corners_to_swap[-1]]
+        for i in range(len(corners_to_swap) - 2, -1, -1):
+            corner, orientation = self.corners[corners_to_swap[i]]
+            print(i, corner)
+            self.corners[corners_to_swap[i+1]] = corner, orientation_map[orientation]
+        self.corners[corners_to_swap[0]] = last_corner, orientation_map[last_orientation]
+
+    def _cycle_edges(self, edges_to_swap, change_orientation: bool):
+        last_edge, last_orientation = self.edges[edges_to_swap[-1]]
+        for i in range(len(edges_to_swap) - 2, -1, -1):
+            edge, orientation = self.edges[edges_to_swap[i]]
+            self.edges[edges_to_swap[i + 1]] = (edge, not orientation if change_orientation else orientation)
+        self.edges[edges_to_swap[0]] = last_edge, (not last_edge if change_orientation else last_orientation)
+
+    def _move_face(self, move):
+        rl_map = r_map = {0: 1, 1: 0, 2: 2}
+        ud_map = {0: 0, 1: 1, 2: 2}
+        fb_map = {0: 2, 1: 1, 2: 0}
+        if move == "R":
+            self._cycle_corners([UFR, UBR, DBR, DFR], r_map)
+            self._cycle_edges([UR, BR, DR, FR], False)
+        elif move == "L":
+            self._cycle_corners([UFL, DFL, DBL, UBL], rl_map)
+            self._cycle_edges([UL, FL, DL, BL], False)
+        elif move == "U":
+            self._cycle_corners([UBL, UBR, UFR, UFL], ud_map)
+            self._cycle_edges([UL, UB, UR, UF], False)
+        elif move == "D":
+            self._cycle_corners([DFL, DFR, DBR, DBL], ud_map)
+            self._cycle_edges([DF, DR, DB, DL], False)
+        elif move == "F":
+            self._cycle_corners([UFL, UFR, DFR, DFL], fb_map)
+            self._cycle_edges([UF, UR, DF, FL], True)
+        elif move == "B":
+            self._cycle_corners([UBR, UBL, DBL, DBR], fb_map)
+            self._cycle_edges([UB, BL, DB, BR], True)
+        return self
+
+    @staticmethod
+    def is_valid_move(move: str):
+        if len(move) != 1 and len(move) != 2:
+            return False
+        return True
+
+    def move_single(self, move: str):
+        if not self.is_valid_move(move):
+            raise ValueError("Move {} is not a valid move".format(move))
+        if len(move) == 2:
+            if move[-1] == "'":
+                self._move_face(move[0])._move_face(move[0])._move_face(move[0])
+            elif move[-1] == "2":
+                self._move_face(move[0])._move_face(move[0])
+        else:
+            self._move_face(move)
+
     def __str__(self):
         cube_string = self.toFaceCube().to_String()
         return "-".join([cube_string[9*i : 9*i+9] for i in range(6)])
@@ -16,63 +136,18 @@ class Cube(CubieCube):
                "B", "B'", "B2",
                ]
 
-    cpU = [UBR, URF, UFL, ULB, DFR, DLF, DBL, DRB]
-    coU = [0, 0, 0, 0, 0, 0, 0, 0]
-    epU = [UB, UR, UF, UL, DR, DF, DL, DB, FR, FL, BL, BR]
-    eoU = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
-    cpR = [DFR, UFL, ULB, URF, DRB, DLF, DBL, UBR]
-    coR = [2, 0, 0, 1, 1, 0, 0, 2]
-    epR = [FR, UF, UL, UB, BR, DF, DL, DB, DR, FL, BL, UR]
-    eoR = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
-    cpF = [UFL, DLF, ULB, UBR, URF, DFR, DBL, DRB]
-    coF = [1, 2, 0, 0, 2, 1, 0, 0]
-    epF = [UR, FL, UL, UB, DR, FR, DL, DB, UF, DF, BL, BR]
-    eoF = [0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0]
-
-    cpD = [URF, UFL, ULB, UBR, DLF, DBL, DRB, DFR]
-    coD = [0, 0, 0, 0, 0, 0, 0, 0]
-    epD = [UR, UF, UL, UB, DF, DL, DB, DR, FR, FL, BL, BR]
-    eoD = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
-    cpL = [URF, ULB, DBL, UBR, DFR, UFL, DLF, DRB]
-    coL = [0, 1, 2, 0, 0, 2, 1, 0]
-    epL = [UR, UF, BL, UB, DR, DF, FL, DB, FR, UL, DL, BR]
-    eoL = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
-    cpB = [URF, UFL, UBR, DRB, DFR, DLF, ULB, DBL]
-    coB = [0, 0, 1, 2, 0, 0, 2, 1]
-    epB = [UR, UF, UL, BR, DR, DF, DL, BL, FR, FL, UB, DB]
-    eoB = [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1]
-
-    moves = {
-        "U": CubieCube(cp=cpU, co=coU, ep=epU, eo=eoU),
-        "R": CubieCube(cp=cpR, co=coR, ep=epR, eo=eoR),
-        "F": CubieCube(cp=cpF, co=coF, ep=epF, eo=eoF),
-        "D": CubieCube(cp=cpD, co=coD, ep=epD, eo=eoD),
-        "L": CubieCube(cp=cpL, co=coL, ep=epL, eo=eoL),
-        "B": CubieCube(cp=cpB, co=coB, ep=epB, eo=eoB),
-    }
-
-    @staticmethod
-    def is_valid_move(move: str):
-        if len(move) != 1 and len(move) != 2:
-            return False
-        return True
-
-    def move_cube(self, move: str):
-        """Moves one face of a Rubik's cube using standard notation"""
-        if not self.is_valid_move(move):
-            raise Exception("Move {} is not a valid move".format(move))
-        elif len(move) == 1:
-            self.multiply(self.moves[move])
-        elif move[-1] == "2":
-            move = move[0]
-            self.multiply(self.moves[move]).multiply(self.moves[move])
-        elif move[-1] =="'":
-            move = move[0]
-            self.multiply(self.moves[move]).multiply(self.moves[move]).multiply(self.moves[move])
-
     def is_solved(self):
-        return self.toFaceCube().to_String() == "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB"
+        return self.corners == solved_corners and self.edges == solved_edges
+
+    def move(self, moves):
+        if isinstance(moves, str):
+            moves = moves.split(" ")
+        for move in moves:
+            self.move_face(move)
+
+    def scramble(self, n_moves):
+        sequence = random.choices(self.actions, k=n_moves)
+        self.move(sequence)
+
+    def represent(self):
+        """Gives representation of a cube as a vector"""
