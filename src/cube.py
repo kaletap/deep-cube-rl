@@ -1,25 +1,26 @@
 import random
 import numpy as np
+import torch
 
-UFR = 0
-UFL = 1
-UBL = 2
-UBR = 3
-DFR = 4
-DFL = 5
-DBL = 6
-DBR = 7
+UBL = 0
+UBR = 1
+UFL = 2
+UFR = 3
+DBL = 4
+DBR = 5
+DFL = 6
+DFR = 7
 
-UR = 0
-UF = 1
-UL = 2
-UB = 3
-DR = 4
-DF = 5
-DL = 6
-DB = 7
-FR = 8
-FL = 9
+UL = 0
+UB = 1
+UR = 2
+UF = 3
+DL = 4
+DB = 5
+DR = 6
+DF = 7
+FL = 8
+FR = 9
 BL = 10
 BR = 11
 
@@ -29,34 +30,34 @@ To every position of a corner we map which corner belongs here as well as it's o
     1: white/yellow side is facing front or back
     2: white/yellow side is facing right or left
 """
-solved_corners = {
-            UBL: (UBL, 0),
-            UBR: (UBR, 0),
-            UFL: (UFL, 0),
-            UFR: (UFR, 0),
-            DBL: (DBL, 0),
-            DBR: (DBR, 0),
-            DFL: (DFL, 0),
-            DFR: (DFR, 0)
-        }
+solved_corners = [
+    (UBL, 0),
+    (UBR, 0),
+    (UFL, 0),
+    (UFR, 0),
+    (DBL, 0),
+    (DBR, 0),
+    (DFL, 0),
+    (DFR, 0)
+]
 
 """
 Similarly for edges. True means that edge is oriented
 """
-solved_edges = {
-            UL: (UL, True),
-            UB: (UB, True),
-            UR: (UR, True),
-            UF: (UF, True),
-            DL: (DL, True),
-            DB: (DB, True),
-            DR: (DR, True),
-            DF: (DF, True),
-            FL: (FL, True),
-            FR: (FR, True),
-            BL: (BL, True),
-            BR: (BR, True)
-        }
+solved_edges = [
+    (UL, True),
+    (UB, True),
+    (UR, True),
+    (UF, True),
+    (DL, True),
+    (DB, True),
+    (DR, True),
+    (DF, True),
+    (FL, True),
+    (FR, True),
+    (BL, True),
+    (BR, True)
+        ]
 
 class Cube():
     def __init__(self, scrambled=False):
@@ -68,11 +69,18 @@ class Cube():
         if scrambled:
             self.scramble()
 
+    def __str__(self):
+        return """
+        Cube(
+        corners={}
+        edges={}
+        )
+        """.format(self.corners, self.edges)
+
     def _cycle_corners(self, corners_to_swap, orientation_map):
         last_corner, last_orientation = self.corners[corners_to_swap[-1]]
         for i in range(len(corners_to_swap) - 2, -1, -1):
             corner, orientation = self.corners[corners_to_swap[i]]
-            print(i, corner)
             self.corners[corners_to_swap[i+1]] = corner, orientation_map[orientation]
         self.corners[corners_to_swap[0]] = last_corner, orientation_map[last_orientation]
 
@@ -124,10 +132,6 @@ class Cube():
         else:
             self._move_face(move)
 
-    def __str__(self):
-        cube_string = self.toFaceCube().to_String()
-        return "-".join([cube_string[9*i : 9*i+9] for i in range(6)])
-
     actions = ["U", "U'", "U2",
                "R", "R'", "R2",
                "F", "F'", "F2",
@@ -143,11 +147,25 @@ class Cube():
         if isinstance(moves, str):
             moves = moves.split(" ")
         for move in moves:
-            self.move_face(move)
+            self.move_single(move)
 
     def scramble(self, n_moves):
         sequence = random.choices(self.actions, k=n_moves)
         self.move(sequence)
 
     def represent(self):
-        """Gives representation of a cube as a vector"""
+        """Gives representation of a cube as a vector to be fed into neural network"""
+        CORNERS_REPR_SIZE = 7 * 24
+        corners_repr = torch.zeros(CORNERS_REPR_SIZE)
+        for corner, (position, orientation) in enumerate(self.corners[:-1]):
+            corners_repr[corner*24 + position*3 + orientation] = 1
+
+        EDGES_REPR_SIZE = 11 * 24
+        edges_repr = torch.zeros(EDGES_REPR_SIZE)
+        for edge, (position, orientation) in enumerate(self.edges[:-1]):
+            edges_repr[edge*24 + position*2 + orientation] = 1
+
+        return torch.cat((corners_repr, edges_repr))
+
+
+
