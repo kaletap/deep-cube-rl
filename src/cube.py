@@ -77,6 +77,9 @@ class Cube():
         )
         """.format(self.corners, self.edges)
 
+    def __repr__(self):
+        return self.__str__()
+
     def _cycle_corners(self, corners_to_swap, orientation_map):
         last_corner, last_orientation = self.corners[corners_to_swap[-1]]
         for i in range(len(corners_to_swap) - 2, -1, -1):

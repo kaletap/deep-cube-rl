@@ -10,7 +10,7 @@ def test_single_move():
     cube.move_single("L'")
     assert(cube.is_solved())
 
-def test_triple_move():
+def test_quadruple_move():
     cube = Cube()
     cube.move_single("R")
     cube.move_single("R")
