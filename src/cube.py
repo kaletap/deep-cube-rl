@@ -59,15 +59,16 @@ solved_edges = [
     (BR, True)
         ]
 
+
 class Cube():
-    def __init__(self, scrambled=False):
+    def __init__(self, corners=None, edges=None, scramble_length=None):
         super().__init__()
 
-        self.corners = solved_corners.copy()
-        self.edges = solved_edges.copy()
+        self.corners = corners or solved_corners.copy()
+        self.edges = edges or solved_edges.copy()
 
-        if scrambled:
-            self.scramble()
+        if scramble_length:
+            self.scramble(scramble_length)
 
     def __str__(self):
         return """
@@ -135,14 +136,6 @@ class Cube():
         else:
             self._move_face(move)
 
-    actions = ["U", "U'", "U2",
-               "R", "R'", "R2",
-               "F", "F'", "F2",
-               "D", "D'", "D2",
-               "L", "L'", "L2",
-               "B", "B'", "B2",
-               ]
-
     def is_solved(self):
         return self.corners == solved_corners and self.edges == solved_edges
 
@@ -169,6 +162,3 @@ class Cube():
             edges_repr[edge*24 + position*2 + orientation] = 1
 
         return torch.cat((corners_repr, edges_repr))
-
-
-
