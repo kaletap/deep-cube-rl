@@ -59,8 +59,16 @@ solved_edges = [
     (BR, True)
         ]
 
+ACTIONS = ("U", "U'", "U2",
+    "R", "R'", "R2",
+    "F", "F'", "F2",
+    "D", "D'", "D2",
+    "L", "L'", "L2",
+    "B", "B'", "B2",
+           )
 
-class Cube():
+
+class Cube:
     def __init__(self, corners=None, edges=None, scramble_length=None):
         super().__init__()
 
@@ -71,12 +79,7 @@ class Cube():
             self.scramble(scramble_length)
 
     def __str__(self):
-        return """
-        Cube(
-        corners={}
-        edges={}
-        )
-        """.format(self.corners, self.edges)
+        return "Cube(corners={}, edges={})".format(self.corners, self.edges)
 
     def __repr__(self):
         return self.__str__()
@@ -146,7 +149,7 @@ class Cube():
             self.move_single(move)
 
     def scramble(self, n_moves):
-        sequence = random.choices(self.actions, k=n_moves)
+        sequence = random.choices(ACTIONS, k=n_moves)
         self.move(sequence)
 
     def represent(self):

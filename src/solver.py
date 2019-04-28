@@ -31,33 +31,25 @@ class RubikNet(nn.Module):
         self.first = nn.Linear(INPUT_DIM, LAYER_1_DIM)
         self.second = nn.Linear(LAYER_1_DIM, LAYER_2_DIM)
         self.action_layer_1 = nn.Linear(LAYER_2_DIM, ACTION_LAYER_DIM)
+        self.action_layer_2 = nn.Linear(ACTION_LAYER_DIM, ACTION_DIM)
         self.value_layer_1 = nn.Linear(LAYER_2_DIM, VALUE_LAYER_DIM)
-        self.value_layer2 = nn.Linear(VALUE_LAYER_DIM, 1)
+        self.value_layer_2 = nn.Linear(VALUE_LAYER_DIM, 1)
 
     def forward(self, x):
         x = self.first(x)  # 4096
         x = self.second(F.elu(x))  # 2048
-        x_actions = self.action_layer_1(F.elu(x))
-        x_actions = F.softmax(x_actions, ACTION_DIM)
+        x_actions = self.action_layer_1(F.elu(x))  # 512
+        x_actions = self.action_layer_2(F.elu(x_actions))  # 18
+        x_actions = F.softmax(x_actions)  # normalized
         x_value = self.value_layer_1(F.elu(x))
         x_value = self.value_layer_2(F.elu(x_value))
         return x_actions, x_value
-
-    def num_flat_features(self, x):
-        size = x.size()[1:]  # all dimensions except the batch dimension
-        num_features = 1
-        for s in size:
-            num_features *= s
-        return num_features
 
 
 class DeepCube:
     def __init__(self):
         self.net = RubikNet()
         self.actions = ACTIONS
-
-    def trainloader(self):
-        return [0, 1]
 
     def train(self, trainloader, epochs=2):
         def customized_loss(y_action_pred, y_value_pred, y_action, y_value, alpha=1):
@@ -82,7 +74,7 @@ class DeepCube:
                 # forward + backward + optimize
                 action_output, value_output = self.net(inputs)
                 loss = customized_loss(action_output, value_output, action_labels, value_label)
-                loss.backward()
+                loss.backward(retain_graph=True)
                 optimizer.step()
 
                 # print statistics
@@ -102,20 +94,24 @@ class DeepCube:
 
         for cube in cubes:
             values = dict()
-            for a in self.actions:
+            for i, a in enumerate(self.actions):
                 new_cube = Cube(cube.corners, cube.edges)
                 new_cube.move_single(a)
                 y_actions, y_value = self.net(new_cube.represent())
-                values[a] = y_value + (1 if new_cube.is_solved() else -1)
-            best_action = max(values.iterkeys(), key=(lambda key: values[key]))
+                values[i] = y_value + (1 if new_cube.is_solved() else -1)
+            best_action_index = max(values, key=(lambda key: values[key]))
             # we set target probas to distribution with all mass in estimated best action
-            y_probas = list(map(lambda ac: 1 if ac==best_action else 0, self.actions))
-            y_value = values[best_action]
+            y_probas = best_action_index
+            y_value = values[best_action_index]
 
             target_probas.append(y_probas)
             target_values.append(y_value)
 
-        trainloader = ([cube.represent() for cube in cubes], target_probas, target_values)
+        input_ = torch.stack(tuple(cube.represent() for cube in cubes))
+        target_probas = torch.Tensor(target_probas).long()
+        target_values = torch.stack(target_values)
+
+        trainloader = [[input_, target_probas, target_values]]
 
         self.train(trainloader)
 
@@ -123,3 +119,8 @@ class DeepCube:
         for i in range(1, 20):
             print("Currently learning on cubes scrmabled with {} moves".format(i))
             self.adi(iterations_per_scramble_length, i)
+
+
+if __name__ == "__main__":
+    deepCube = DeepCube()
+    deepCube.learn(1)
