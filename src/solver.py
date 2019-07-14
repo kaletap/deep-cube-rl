@@ -51,13 +51,13 @@ class DeepCube:
         self.net = RubikNet()
         self.actions = ACTIONS
 
-    def train(self, trainloader, epochs=2):
-        def customized_loss(y_action_pred, y_value_pred, y_action, y_value, alpha=1):
+    def train(self, trainloader, weight, epochs=2):
+        def customized_loss(y_action_pred, y_value_pred, y_action, y_value, weight, alpha=1):
             action_criterion = nn.CrossEntropyLoss()
             action_loss = action_criterion(y_action_pred, y_action)
             value_criterion = nn.SmoothL1Loss()
             value_loss = value_criterion(y_value_pred, y_value)
-            return action_loss + alpha * value_loss
+            return weight * (action_loss + alpha * value_loss)
 
         optimizer = optim.SGD(self.net.parameters(), lr=0.001, momentum=0.9)
 
@@ -73,7 +73,7 @@ class DeepCube:
 
                 # forward + backward + optimize
                 action_output, value_output = self.net(inputs)
-                loss = customized_loss(action_output, value_output, action_labels, value_label)
+                loss = customized_loss(action_output, value_output, action_labels, value_label, weight=weight)
                 loss.backward(retain_graph=True)
                 optimizer.step()
 
@@ -87,7 +87,9 @@ class DeepCube:
         print('Finished Training')
 
     def adi(self, n, scramble_length):
-        """Autodidactic Iteration described in paper "Solving the Rubik's Cube Without Human Knowledge (2018)"""
+        """
+        Autodidactic Iteration described in paper "Solving the Rubik's Cube Without Human Knowledge" (2018)
+        """
         cubes = [Cube(scramble_length=scramble_length) for _ in range(n)]
         target_probas = list()
         target_values = list()
@@ -113,12 +115,19 @@ class DeepCube:
 
         trainloader = [[input_, target_probas, target_values]]
 
-        self.train(trainloader)
+        # higher training weight to cubes closed to solved (due to divergent solutions otherwise)
+        self.train(trainloader, weight=1/scramble_length)
 
     def learn(self, iterations_per_scramble_length):
         for i in range(1, 20):
-            print("Currently learning on cubes scrmabled with {} moves".format(i))
+            print("Currently learning on cubes scrambled with {} moves".format(i))
             self.adi(iterations_per_scramble_length, i)
+
+    def solve(self, cube):
+        """
+        Monte Carlo Tree Search implementation to find a solution
+        """
+        pass
 
 
 if __name__ == "__main__":

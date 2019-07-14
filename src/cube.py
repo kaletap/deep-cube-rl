@@ -153,7 +153,9 @@ class Cube:
         self.move(sequence)
 
     def represent(self):
-        """Gives representation of a cube as a vector to be fed into neural network"""
+        """
+        Gives representation of a cube as a vector to be fed into neural network
+        """
         CORNERS_REPR_SIZE = 7 * 24
         corners_repr = torch.zeros(CORNERS_REPR_SIZE)
         for corner, (position, orientation) in enumerate(self.corners[:-1]):
