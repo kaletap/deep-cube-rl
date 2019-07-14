@@ -1,5 +1,4 @@
-import random
-import numpy as np
+import logging
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -23,6 +22,8 @@ LAYER_1_DIM = 4096
 LAYER_2_DIM = 2048
 ACTION_LAYER_DIM = 512
 VALUE_LAYER_DIM = 512
+
+logger = logging.getLogger()
 
 
 class RubikNet(nn.Module):
@@ -51,7 +52,9 @@ class DeepCube:
         self.net = RubikNet()
         self.actions = ACTIONS
 
-    def train(self, trainloader, weight, epochs=2):
+    def train(self, trainloader: list, weight: float, epochs: int = 2) -> None:
+        logging.debug("DeepCube.train(weight={}, epochs={}".format(weight, epochs))
+
         def customized_loss(y_action_pred, y_value_pred, y_action, y_value, weight, alpha=1):
             action_criterion = nn.CrossEntropyLoss()
             action_loss = action_criterion(y_action_pred, y_action)
@@ -86,10 +89,13 @@ class DeepCube:
 
         print('Finished Training')
 
-    def adi(self, n, scramble_length):
+    def adi(self, n: int, scramble_length: int) -> None:
         """
         Autodidactic Iteration described in paper "Solving the Rubik's Cube Without Human Knowledge" (2018)
         """
+
+        logger.debug("DeepCube.adi(n={}, scramble_length={}".format(n, scramble_length))
+
         cubes = [Cube(scramble_length=scramble_length) for _ in range(n)]
         target_probas = list()
         target_values = list()
@@ -118,7 +124,7 @@ class DeepCube:
         # higher training weight to cubes closed to solved (due to divergent solutions otherwise)
         self.train(trainloader, weight=1/scramble_length)
 
-    def learn(self, iterations_per_scramble_length):
+    def learn(self, iterations_per_scramble_length: int) -> None:
         for i in range(1, 20):
             print("Currently learning on cubes scrambled with {} moves".format(i))
             self.adi(iterations_per_scramble_length, i)
