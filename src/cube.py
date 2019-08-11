@@ -1,5 +1,5 @@
+from typing import List
 import random
-import numpy as np
 import torch
 
 UBL = 0
@@ -57,19 +57,24 @@ solved_edges = [
     (FR, True),
     (BL, True),
     (BR, True)
-        ]
+]
 
 ACTIONS = ("U", "U'", "U2",
-    "R", "R'", "R2",
-    "F", "F'", "F2",
-    "D", "D'", "D2",
-    "L", "L'", "L2",
-    "B", "B'", "B2",
+           "R", "R'", "R2",
+           "F", "F'", "F2",
+           "D", "D'", "D2",
+           "L", "L'", "L2",
+           "B", "B'", "B2",
            )
 
 
 class Cube:
-    def __init__(self, corners=None, edges=None, scramble_length=None):
+    """
+    Class representing some state of a Rubik's Cube. Contains methods for moving each face and returning
+    it's tensor representation.
+    """
+
+    def __init__(self, corners: List = None, edges: List = None, scramble_length: int = None):
         super().__init__()
 
         self.corners = corners or solved_corners.copy()
@@ -77,6 +82,10 @@ class Cube:
 
         if scramble_length:
             self.scramble(scramble_length)
+
+    def scramble(self, n_moves) -> None:
+        sequence = random.choices(ACTIONS, k=n_moves)
+        self.move(sequence)
 
     def __str__(self):
         return "Cube(corners={}, edges={})".format(self.corners, self.edges)
@@ -88,17 +97,17 @@ class Cube:
         last_corner, last_orientation = self.corners[corners_to_swap[-1]]
         for i in range(len(corners_to_swap) - 2, -1, -1):
             corner, orientation = self.corners[corners_to_swap[i]]
-            self.corners[corners_to_swap[i+1]] = corner, orientation_map[orientation]
+            self.corners[corners_to_swap[i + 1]] = corner, orientation_map[orientation]
         self.corners[corners_to_swap[0]] = last_corner, orientation_map[last_orientation]
 
-    def _cycle_edges(self, edges_to_swap, change_orientation: bool):
+    def _cycle_edges(self, edges_to_swap: List[int], change_orientation: bool) -> None:
         last_edge, last_orientation = self.edges[edges_to_swap[-1]]
         for i in range(len(edges_to_swap) - 2, -1, -1):
             edge, orientation = self.edges[edges_to_swap[i]]
             self.edges[edges_to_swap[i + 1]] = (edge, not orientation if change_orientation else orientation)
         self.edges[edges_to_swap[0]] = last_edge, (not last_edge if change_orientation else last_orientation)
 
-    def _move_face(self, move):
+    def _move_face(self, move) -> Cube:
         rl_map = r_map = {0: 1, 1: 0, 2: 2}
         ud_map = {0: 0, 1: 1, 2: 2}
         fb_map = {0: 2, 1: 1, 2: 0}
@@ -123,12 +132,12 @@ class Cube:
         return self
 
     @staticmethod
-    def is_valid_move(move: str):
+    def is_valid_move(move: str) -> bool:
         if len(move) != 1 and len(move) != 2:
             return False
         return True
 
-    def move_single(self, move: str):
+    def move_single(self, move: str) -> None:
         if not self.is_valid_move(move):
             raise ValueError("Move {} is not a valid move".format(move))
         if len(move) == 2:
@@ -142,28 +151,24 @@ class Cube:
     def is_solved(self):
         return self.corners == solved_corners and self.edges == solved_edges
 
-    def move(self, moves):
+    def move(self, moves) -> None:
         if isinstance(moves, str):
             moves = moves.split(" ")
         for move in moves:
             self.move_single(move)
 
-    def scramble(self, n_moves):
-        sequence = random.choices(ACTIONS, k=n_moves)
-        self.move(sequence)
-
-    def represent(self):
+    def represent(self) -> torch.Tensor:
         """
         Gives representation of a cube as a vector to be fed into neural network
         """
         CORNERS_REPR_SIZE = 7 * 24
         corners_repr = torch.zeros(CORNERS_REPR_SIZE)
         for corner, (position, orientation) in enumerate(self.corners[:-1]):
-            corners_repr[corner*24 + position*3 + orientation] = 1
+            corners_repr[corner * 24 + position * 3 + orientation] = 1
 
         EDGES_REPR_SIZE = 11 * 24
         edges_repr = torch.zeros(EDGES_REPR_SIZE)
         for edge, (position, orientation) in enumerate(self.edges[:-1]):
-            edges_repr[edge*24 + position*2 + orientation] = 1
+            edges_repr[edge * 24 + position * 2 + orientation] = 1
 
         return torch.cat((corners_repr, edges_repr))

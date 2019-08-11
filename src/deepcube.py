@@ -1,59 +1,30 @@
+from typing import List, Optional
 import logging
+import os
+import datetime
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
-from src.cube import Cube
+from cube import Cube
+from rubiknet import RubikNet, ACTIONS, ACTION_DIM
 
-ACTIONS = ("U", "U'", "U2",
-    "R", "R'", "R2",
-    "F", "F'", "F2",
-    "D", "D'", "D2",
-    "L", "L'", "L2",
-    "B", "B'", "B2",
-           )
-
-INPUT_DIM = 7*24 + 11*24
-ACTION_DIM = len(ACTIONS)
-OUTPUT_DIM = ACTION_DIM + 1
-
-LAYER_1_DIM = 4096
-LAYER_2_DIM = 2048
-ACTION_LAYER_DIM = 512
-VALUE_LAYER_DIM = 512
 
 logger = logging.getLogger()
 
 
-class RubikNet(nn.Module):
-    def __init__(self):
-        super(RubikNet, self).__init__()
-        self.first = nn.Linear(INPUT_DIM, LAYER_1_DIM)
-        self.second = nn.Linear(LAYER_1_DIM, LAYER_2_DIM)
-        self.action_layer_1 = nn.Linear(LAYER_2_DIM, ACTION_LAYER_DIM)
-        self.action_layer_2 = nn.Linear(ACTION_LAYER_DIM, ACTION_DIM)
-        self.value_layer_1 = nn.Linear(LAYER_2_DIM, VALUE_LAYER_DIM)
-        self.value_layer_2 = nn.Linear(VALUE_LAYER_DIM, 1)
-
-    def forward(self, x):
-        x = self.first(x)  # 4096
-        x = self.second(F.elu(x))  # 2048
-        x_actions = self.action_layer_1(F.elu(x))  # 512
-        x_actions = self.action_layer_2(F.elu(x_actions))  # 18
-        x_actions = F.softmax(x_actions)  # normalized
-        x_value = self.value_layer_1(F.elu(x))
-        x_value = self.value_layer_2(F.elu(x_value))
-        return x_actions, x_value
-
-
 class DeepCube:
-    def __init__(self):
-        self.net = RubikNet()
+    """
+    Class responsible for actual neural network training on random Rubik's Cubes (Autodidactic Iteration)
+    """
+    def __init__(self, path: str = None):
         self.actions = ACTIONS
+        self.net = RubikNet()
+        if path:
+            self.net.load_state_dict(path)
 
     def train(self, trainloader: list, weight: float, epochs: int = 2) -> None:
-        logging.debug("DeepCube.train(weight={}, epochs={}".format(weight, epochs))
+        logger.debug("DeepCube.train(weight={}, epochs={}".format(weight, epochs))
 
         def customized_loss(y_action_pred, y_value_pred, y_action, y_value, weight, alpha=1):
             action_criterion = nn.CrossEntropyLoss()
@@ -91,7 +62,7 @@ class DeepCube:
 
     def adi(self, n: int, scramble_length: int) -> None:
         """
-        Autodidactic Iteration described in paper "Solving the Rubik's Cube Without Human Knowledge" (2018)
+        Autodidactic Iteration described in paper "Solving the Rubik's Cube Without Human Knowledge" (2018).
         """
 
         logger.debug("DeepCube.adi(n={}, scramble_length={}".format(n, scramble_length))
@@ -125,17 +96,39 @@ class DeepCube:
         self.train(trainloader, weight=1/scramble_length)
 
     def learn(self, iterations_per_scramble_length: int) -> None:
+        """
+        Main interface for learning a model.
+        :param iterations_per_scramble_length:
+        :return:
+        """
         for i in range(1, 20):
             print("Currently learning on cubes scrambled with {} moves".format(i))
             self.adi(iterations_per_scramble_length, i)
 
-    def solve(self, cube):
+    def save_progress(self, path: str = None) -> None:
         """
-        Monte Carlo Tree Search implementation to find a solution
+        :param path: Path in which weights are going to be located
+        :return:
         """
-        pass
+        save_path_root = "weights"
+        folder_name = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        folder_path = path or os.path.join(save_path_root, folder_name)
+        path = os.join(folder_path, "rubik_net_state_dict.pickle")
+        torch.save(self.net.state_dict(), path)
+        # TODO: write some metadata as well
+        # metadata_path = os.path.join(folder_path, "info.json")
 
-
-if __name__ == "__main__":
-    deepCube = DeepCube()
-    deepCube.learn(1)
+    # TODO: Monte Carlo implementation
+    def solve(self, cube: Cube, move_limit: int = 200) -> Optional[List[str]]:
+        """
+        Naive implementation of solving strategy - doing the best move every time.
+        """
+        solution = []
+        while not cube.is_solved():
+            probas = self.net(cube.represent())[:ACTION_DIM]
+            best_move = ACTIONS[torch.argmax(probas)]
+            cube.move(best_move)
+            solution.append(best_move)
+            if len(solution) >= move_limit:
+                return None
+        return solution
