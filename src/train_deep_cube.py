@@ -1,3 +1,8 @@
+"""
+Script for running DeepCube training
+"""
+
+
 import argparse
 
 from deepcube import DeepCube
@@ -10,5 +15,6 @@ def get_parser():
 
 
 if __name__ == "__main__":
-    deepCube = DeepCube()
-    deepCube.learn(1)
+    deep_cube = DeepCube()
+    deep_cube.learn(1)
+    deep_cube.save_progress()

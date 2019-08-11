@@ -21,7 +21,7 @@ class DeepCube:
         self.actions = ACTIONS
         self.net = RubikNet()
         if path:
-            self.net.load_state_dict(path)
+            self.net.load_state_dict(torch.load(path))
 
     def train(self, trainloader: list, weight: float, epochs: int = 2) -> None:
         logger.debug("DeepCube.train(weight={}, epochs={}".format(weight, epochs))
@@ -113,7 +113,9 @@ class DeepCube:
         save_path_root = "weights"
         folder_name = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         folder_path = path or os.path.join(save_path_root, folder_name)
-        path = os.join(folder_path, "rubik_net_state_dict.pickle")
+        if not os.path.exists(folder_path):
+            os.mkdir(folder_path)
+        path = os.path.join(folder_path, "rubik_net_state_dict.pickle")
         torch.save(self.net.state_dict(), path)
         # TODO: write some metadata as well
         # metadata_path = os.path.join(folder_path, "info.json")
