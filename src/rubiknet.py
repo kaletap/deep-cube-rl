@@ -1,16 +1,15 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 ACTIONS = ("U", "U'", "U2",
-    "R", "R'", "R2",
-    "F", "F'", "F2",
-    "D", "D'", "D2",
-    "L", "L'", "L2",
-    "B", "B'", "B2",
+           "R", "R'", "R2",
+           "F", "F'", "F2",
+           "D", "D'", "D2",
+           "L", "L'", "L2",
+           "B", "B'", "B2",
            )
 
-INPUT_DIM = 7*24 + 11*24
+INPUT_DIM = 7 * 24 + 11 * 24
 ACTION_DIM = len(ACTIONS)
 OUTPUT_DIM = ACTION_DIM + 1  # one dimension for value function
 
@@ -25,6 +24,7 @@ class RubikNet(nn.Module):
     Definition of Neural Network we want to train. For now architecture is identical to the original.
     We use same weights for value function and actions.
     """
+
     def __init__(self):
         super(RubikNet, self).__init__()
         self.first = nn.Linear(INPUT_DIM, LAYER_1_DIM)
