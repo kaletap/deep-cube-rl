@@ -34,6 +34,9 @@ class DeepCube:
                 # folder_name has to have 19 characters and not consist of any letter
                 return len(folder_name) == 19 and all(not c.isalpha() for c in folder_name)
             dates = [folder for folder in os.listdir(SAVE_PATH_ROOT) if is_date_folder(folder)]
+            if len(dates) == 0:
+                print("No folder to restore from!")
+                return
             path = os.path.join(SAVE_PATH_ROOT, max(dates), NET_STATE_FILE)
             self.net.load_state_dict(torch.load(path))
             print("Restored weights from {}".format(path))

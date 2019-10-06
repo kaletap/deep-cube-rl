@@ -1,9 +1,9 @@
 This project is not finished yet.
 
 # TODO:
-1. Implement saving and restoring trained neural networks
-2. Implement logging
-3. Actually train the neural network.
+1. Implement saving and restoring trained neural networks [done]
+2. Implement logging [done]
+3. Actually train the neural network using cloud computing
 
 # Solving the Rubik's Cube Without Human Knowledge
 https://arxiv.org/abs/1805.07470
