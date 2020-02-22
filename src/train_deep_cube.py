@@ -3,6 +3,7 @@ Script for running DeepCube training
 """
 
 import argparse
+from tqdm import tqdm
 
 from deepcube import DeepCube
 
@@ -16,6 +17,10 @@ def get_parser() -> argparse.ArgumentParser:
 
 if __name__ == "__main__":
     deep_cube = DeepCube(restore=True, verbose=True)
-    for _ in range(20):
-        deep_cube.learn(4000)
+    for _ in tqdm(range(20)):
+        for scramble_length in range(1, 6):
+            print("Currently learning on cubes scrambled with {} moves".format(scramble_length))
+            deep_cube.adi(4000, scramble_length)
+
     deep_cube.save_progress()
+

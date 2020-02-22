@@ -90,7 +90,7 @@ class DeepCube:
         target_probas = list()
         target_values = list()
 
-        log_every = 100
+        log_every = 1000
         cube_processed = 0
         for cube in cubes:
             start_time = time.time()
@@ -121,14 +121,6 @@ class DeepCube:
 
         # higher training weight to cubes closed to solved (due to divergent solutions otherwise)
         self.train(trainloader, weight=1/scramble_length)
-
-    def learn(self, iterations_per_scramble_length: int) -> None:
-        """
-        Main interface for learning a model.
-        """
-        for i in range(1, 10):
-            print("Currently learning on cubes scrambled with {} moves".format(i))
-            self.adi(iterations_per_scramble_length, i)
 
     def save_progress(self, path: str = None) -> None:
         """

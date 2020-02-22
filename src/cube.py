@@ -1,4 +1,4 @@
-from __future__ import annotations
+#from __future__ import annotations
 from typing import List
 import random
 import torch
@@ -108,7 +108,7 @@ class Cube:
             self.edges[edges_to_swap[i + 1]] = (edge, not orientation if change_orientation else orientation)
         self.edges[edges_to_swap[0]] = last_edge, (not last_edge if change_orientation else last_orientation)
 
-    def _move_face(self, move) -> Cube:
+    def _move_face(self, move):
         rl_map = r_map = {0: 1, 1: 0, 2: 2}
         ud_map = {0: 0, 1: 1, 2: 2}
         fb_map = {0: 2, 1: 1, 2: 0}
